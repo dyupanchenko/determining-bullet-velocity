@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЛР: Визначення швидкості кулі</title>
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {box-sizing: border-box;margin: 0;padding: 0;}
+        body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;padding: 20px;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);min-height: 100vh;}
+        .container {max-width: 1200px;margin: 0 auto;background: white;padding: 30px;border-radius: 15px;box-shadow: 0 10px 40px rgba(0,0,0,0.2);}
+        h1 {text-align: center;color: #2c3e50;margin-bottom: 10px;font-size: clamp(1.5rem, 4vw, 2.5rem);}
+        .subtitle {text-align: center;color: #7f8c8d;font-style: italic;margin-bottom: 30px;}
+        h3 {color: #34495e;border-left: 4px solid #3498db;padding-left: 12px;margin: 30px 0 15px;}
+        .formula-box {background: #f8f9fa;border: 2px solid #3498db;border-radius: 8px;padding: 20px;text-align: center;margin: 20px 0;}
+        .input-group {display: grid;grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));gap: 15px;margin-bottom: 20px;padding: 15px;border: 1px solid #e1e8ed;border-radius: 8px;background: #f8f9fa;}
+        .input-item {display: flex;flex-direction: column;}
+        .input-item label {font-size: 14px;font-weight: 600;margin-bottom: 6px;color: #555;}
+        .input-item input {padding: 10px;border: 2px solid #ddd;border-radius: 6px;font-size: 16px;transition: all 0.3s;}
+        .input-item input:focus {outline: none;border-color: #3498db;box-shadow: 0 0 0 3px rgba(52,152,219,0.1);}
+        .read-only-value {padding: 10px;border: 2px solid #3498db;border-radius: 6px;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;font-size: 18px;font-weight: bold;text-align: center;}
+        #experimentInputs {display: grid;grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));gap: 15px;padding: 15px;border: 1px solid #e1e8ed;border-radius: 8px;background: #f8f9fa;margin-bottom: 20px;}
+        .controls {text-align: center;margin: 30px 0;}
+        .btn-primary {padding: 15px 35px;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;border: none;border-radius: 8px;cursor: pointer;font-size: 18px;font-weight: 600;transition: all 0.3s;box-shadow: 0 4px 15px rgba(102,126,234,0.4);}
+        .btn-primary:hover:not(:disabled) {transform: translateY(-2px);box-shadow: 0 6px 20px rgba(102,126,234,0.6);}
+        .btn-primary:disabled {opacity: 0.6;cursor: not-allowed;}
+        .status-message {text-align: center;margin: 20px 0;padding: 15px;border-radius: 8px;display: none;}
+        .status-message.loading {background: #d4edff;color: #0066cc;display: block;}
+        .status-message.error {background: #ffe0e0;color: #cc0000;display: block;}
+        .status-message.success {background: #d4f4dd;color: #007700;display: block;}
+        .results-section {margin-top: 40px;}
+        .results-header {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;padding: 15px;border-radius: 8px 8px 0 0;text-align: center;}
+        .results-summary {background: #f8f9fa;padding: 20px;border: 2px solid #3498db;border-top: none;border-radius: 0 0 8px 8px;margin-bottom: 20px;text-align: center;font-size: 1.2rem;font-weight: 600;}
+        #resultTable {width: 100%;border-collapse: collapse;margin-top: 15px;font-size: 14px;}
+        #resultTable thead {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);color: white;}
+        #resultTable th, #resultTable td {border: 1px solid #ddd;padding: 12px 8px;text-align: center;}
+        .spinner {display: inline-block;width: 20px;height: 20px;border: 3px solid rgba(0,102,204,0.3);border-radius: 50%;border-top-color: #0066cc;animation: spin 0.8s linear infinite;margin-right: 10px;}
+        @keyframes spin {to {transform: rotate(360deg);}}
+        @keyframes impact {0%, 100% {transform: translateX(0);}25% {transform: translateX(-2px);}75% {transform: translateX(2px);}}
+        
+        .preloader {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);display: flex;flex-direction: column;align-items: center;justify-content: center;z-index: 9999;transition: opacity 0.5s;}
+        .preloader-content {text-align: center;color: white;}
+        .preloader-spinner {width: 60px;height: 60px;border: 5px solid rgba(255,255,255,0.3);border-top-color: white;border-radius: 50%;animation: spin 1s linear infinite;margin: 0 auto 20px;}
+        .preloader-text {font-size: 22px;font-weight: 600;margin-bottom: 10px;}
+        .preloader-subtext {font-size: 14px;opacity: 0.9;}
+        
+        .angle-display {background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);border: 2px solid #ffc107;border-radius: 8px;padding: 15px;margin: 15px 0;text-align: center;font-size: 18px;font-weight: 600;color: #856404;box-shadow: 0 2px 8px rgba(255,193,7,0.3);transition: all 0.3s;}
+        .angle-display .angle-value {color: #d39e00;font-size: 24px;font-weight: 700;}
+        
+        @media (max-width: 768px) {
+            .angle-display {font-size: 14px;}
+            .angle-display .angle-value {font-size: 18px;}
+            svg {width: 100%; height: auto;}
+        }
+    </style>
+</head>
+<body>
+    <div class="preloader" id="preloader">
+        <div class="preloader-content">
+            <div class="preloader-spinner"></div>
+            <div class="preloader-text">Ініціалізація...</div>
+            <div class="preloader-subtext">Підготовка інтерфейсу</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Лабораторна робота: "Визначення швидкості кулі"</h1>
+        <p class="subtitle">Експериментальне визначення швидкості польоту м'якої кулі за допомогою балістичного маятника</p>
+        
+        <h3>📐 Схема експериментальної установки</h3>
+        <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); border-radius: 12px; padding: 25px; margin: 20px 0; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+            <div style="background: #ecf0f1; border-radius: 8px; padding: 20px;">
+                <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button id="animateBtn" class="btn-primary" style="background:#e74c3c; box-shadow:0 4px 15px rgba(231,76,60,0.4);">🎯 Постріл!</button>
+                </div>
+                
+                <div id="angleDisplay" class="angle-display" style="display:none;">
+                    Кут відхилення: <span class="angle-value" id="angleValue">0°</span> | 
+                    Відхилення: <span class="angle-value" id="displacementValue">0 см</span>
+                </div>
+                
+                <svg id="experimentSvg" viewBox="0 0 1000 600" style="width: 100%; max-width: 1000px; margin: 0 auto; display: block;">
+                    <defs>
+                        <linearGradient id="wallGrad"><stop offset="0%" stop-color="#e8e8e8"/><stop offset="100%" stop-color="#d4d4d4"/></linearGradient>
+                        <linearGradient id="woodGrad"><stop offset="0%" stop-color="#8B4513"/><stop offset="50%" stop-color="#A0522D"/><stop offset="100%" stop-color="#8B4513"/></linearGradient>
+                        <linearGradient id="rulerGrad"><stop offset="0%" stop-color="#f8f8f8"/><stop offset="50%" stop-color="#ffffff"/><stop offset="100%" stop-color="#f0f0f0"/></linearGradient>
+                        <linearGradient id="bulletGrad"><stop offset="0%" stop-color="#6a747e"/><stop offset="30%" stop-color="#4a545e"/><stop offset="70%" stop-color="#34404a"/><stop offset="100%" stop-color="#1e2830"/></linearGradient>
+                        <radialGradient id="bulletShine"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.7"/><stop offset="50%" stop-color="#dddddd" stop-opacity="0.4"/><stop offset="100%" stop-color="#888888" stop-opacity="0"/></radialGradient>
+                        <radialGradient id="flashGrad"><stop offset="0%" stop-color="#ffeb3b" stop-opacity="1"/><stop offset="30%" stop-color="#ffc107" stop-opacity="0.9"/><stop offset="60%" stop-color="#ff9800" stop-opacity="0.6"/><stop offset="100%" stop-color="#ff5722" stop-opacity="0"/></radialGradient>
+                        <filter id="shadow"><feDropShadow dx="3" dy="5" stdDeviation="4" flood-opacity="0.4"/></filter>
+                        <filter id="lightShadow"><feDropShadow dx="1" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter>
+                        <filter id="glow"><feGaussianBlur stdDeviation="4" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                    </defs>
+                    
+                    <rect x="0" y="0" width="1000" height="600" fill="url(#wallGrad)"/>
+                    <g id="table"><rect x="0" y="500" width="1000" height="100" fill="url(#woodGrad)" filter="url(#shadow)"/><rect x="0" y="500" width="1000" height="15" fill="#654321" opacity="0.5"/></g>
+                    <g id="stand" filter="url(#shadow)">
+                        <rect x="480" y="50" width="40" height="450" fill="#34495e" rx="5"/>
+                        <rect x="475" y="45" width="50" height="20" fill="#2c3e50" rx="5"/>
+                        <rect x="460" y="490" width="80" height="10" fill="#2c3e50" rx="3"/>
+                        <rect x="510" y="60" width="80" height="15" fill="#2c3e50" rx="3"/>
+                        <circle cx="590" cy="67" r="8" fill="#7f8c8d" stroke="#34495e" stroke-width="2"/>
+                    </g>
+
+                    <g id="ruler" filter="url(#lightShadow)">
+                        <rect x="545" y="60" width="30" height="407" fill="url(#rulerGrad)" stroke="#bdc3c7" stroke-width="2" rx="3"/>
+                        <line x1="545" y1="67" x2="560" y2="67" stroke="#2c3e50" stroke-width="2"/>
+                        <text x="565" y="72" font-size="10" fill="#2c3e50" font-weight="bold">0</text>
+                        <line x1="545" y1="101" x2="560" y2="101" stroke="#2c3e50" stroke-width="2"/><text x="565" y="106" font-size="10" fill="#2c3e50" font-weight="bold">10</text>
+                        <line x1="545" y1="135" x2="560" y2="135" stroke="#2c3e50" stroke-width="2"/><text x="565" y="140" font-size="10" fill="#2c3e50" font-weight="bold">20</text>
+                        <line x1="545" y1="169" x2="560" y2="169" stroke="#2c3e50" stroke-width="2"/><text x="565" y="174" font-size="10" fill="#2c3e50" font-weight="bold">30</text>
+                        <line x1="545" y1="203" x2="560" y2="203" stroke="#2c3e50" stroke-width="2"/><text x="565" y="208" font-size="10" fill="#2c3e50" font-weight="bold">40</text>
+                        <line x1="545" y1="237" x2="560" y2="237" stroke="#2c3e50" stroke-width="2"/><text x="565" y="242" font-size="10" fill="#2c3e50" font-weight="bold">50</text>
+                        <line x1="545" y1="271" x2="560" y2="271" stroke="#2c3e50" stroke-width="2"/><text x="565" y="276" font-size="10" fill="#2c3e50" font-weight="bold">60</text>
+                        <line x1="545" y1="305" x2="560" y2="305" stroke="#2c3e50" stroke-width="2"/><text x="565" y="310" font-size="10" fill="#2c3e50" font-weight="bold">70</text>
+                        <line x1="545" y1="339" x2="560" y2="339" stroke="#2c3e50" stroke-width="2"/><text x="565" y="344" font-size="10" fill="#2c3e50" font-weight="bold">80</text>
+                        <line x1="545" y1="373" x2="560" y2="373" stroke="#2c3e50" stroke-width="2"/><text x="565" y="378" font-size="10" fill="#2c3e50" font-weight="bold">90</text>
+                        <line x1="545" y1="407" x2="560" y2="407" stroke="#c0392b" stroke-width="3"/><text x="565" y="412" font-size="10" fill="#c0392b" font-weight="bold">100</text>
+                        <text x="560" y="432" font-size="11" fill="#2c3e50" font-weight="bold">см</text>
+                    </g>
+
+                    <g id="horizontalRuler" filter="url(#lightShadow)">
+                        <rect x="540" y="475" width="150" height="20" fill="url(#rulerGrad)" stroke="#bdc3c7" stroke-width="2" rx="3"/>
+                        <line x1="540" y1="485" x2="690" y2="485" stroke="#2c3e50" stroke-width="3"/>
+                        <line x1="550" y1="480" x2="550" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="545" y="470" font-size="10" fill="#2c3e50" font-weight="bold">0</text>
+                        <line x1="575" y1="480" x2="575" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="570" y="470" font-size="10" fill="#2c3e50" font-weight="bold">10</text>
+                        <line x1="600" y1="480" x2="600" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="595" y="470" font-size="10" fill="#2c3e50" font-weight="bold">20</text>
+                        <line x1="625" y1="480" x2="625" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="620" y="470" font-size="10" fill="#2c3e50" font-weight="bold">30</text>
+                        <line x1="650" y1="480" x2="650" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="645" y="470" font-size="10" fill="#2c3e50" font-weight="bold">40</text>
+                        <line x1="675" y1="480" x2="675" y2="490" stroke="#2c3e50" stroke-width="2"/><text x="670" y="470" font-size="10" fill="#2c3e50" font-weight="bold">50</text>
+                        <text x="670" y="510" font-size="11" fill="#2c3e50" font-weight="bold">см</text>
+                    </g>
+
+                    <g id="pulleyBlock">
+                        <circle cx="590" cy="67" r="10" fill="#7f8c8d" stroke="#34495e" stroke-width="2"/>
+                        <circle cx="590" cy="67" r="6" fill="#34495e"/>
+                    </g>
+
+                    <g id="pendulumGroup">
+                        <line id="thread-left" x1="585" y1="67" x2="550" y2="405" stroke="#95a5a6" stroke-width="2"/>
+                        <line id="thread-right" x1="595" y1="67" x2="600" y2="405" stroke="#95a5a6" stroke-width="2"/>
+                        <g id="bob-group" transform="translate(550,375)"> 
+                            <g id="bob-contents"><ellipse cx="0" cy="30" rx="8" ry="30" fill="#2e7db5" stroke="#1a5276" stroke-width="1.5"/>
+                            <rect x="0" y="0" width="50" height="60" fill="#3498db" stroke="#2980b9" stroke-width="2"/> 
+                            <ellipse cx="50" cy="30" rx="8" ry="30" fill="#1a5c8a" stroke="#1a5276" stroke-width="1.5"/> 
+                            <circle cx="25" cy="30" r="3" fill="#2c3e50"/> 
+                            <text id="bob-text" x="25" y="30" text-anchor="middle" dominant-baseline="central" fill="white" font-size="16" font-weight="700">M</text> 
+                            <g id="embedded-bullet" opacity="0" transform="translate(5, 30)"> 
+                                <ellipse cx="-12" cy="0" rx="6" ry="5" fill="url(#bulletGrad)" filter="url(#lightShadow)"/>
+                                <rect x="-18" y="-5" width="12" height="10" fill="url(#bulletGrad)"/>
+                                <path d="M -18 -5 L -24 -2.5 L -24 2.5 L -18 5" fill="#1e2830"/>
+                                <ellipse cx="-15" cy="-1" rx="2" ry="1.5" fill="url(#bulletShine)"/>
+                                <text x="-14" y="0" font-size="7" fill="white" dominant-baseline="central" text-anchor="middle" font-weight="bold">m₀</text> </g>
+                            </g>
+                        </g>
+                    </g>
+                    
+                    <line id="lengthMarker" x1="610" y1="67" x2="610" y2="405" stroke="#e74c3c" stroke-width="2" stroke-dasharray="5 5" opacity="1"/>
+                    <text id="lengthLabel" x="620" y="236" fill="#e74c3c" font-size="20" font-weight="bold">L</text>
+
+                    <g id="gun">
+                        <title>Зброя для пострілу</title>
+                        <rect id="gun-body" x="180" y="390" width="180" height="30" fill="#34495e" rx="5" filter="url(#shadow)"/>
+                        <rect id="gun-stock" x="220" y="420" width="60" height="15" fill="#2c3e50" rx="3"/>
+                        <rect id="gun-barrel" x="360" y="400" width="50" height="10" fill="#34495e" rx="2"/>
+                        <rect id="gun-trigger" x="280" y="405" width="10" height="20" fill="#2c3e50" rx="2"/>
+                        <circle cx="200" cy="405" r="4" fill="#555"/>
+                        <circle cx="340" cy="405" r="4" fill="#555"/>
+                    </g>
+
+                    <g id="bullet" opacity="0">
+                        <title>Куля</title>
+                        <ellipse cx="375" cy="405" rx="10" ry="7" fill="url(#bulletGrad)" filter="url(#lightShadow)"/>
+                        <rect x="360" y="398" width="15" height="14" fill="url(#bulletGrad)"/>
+                        <path d="M 360 398 L 354 401 L 354 409 L 360 412" fill="#1e2830"/>
+                        <ellipse cx="373" cy="402" rx="4" ry="2.5" fill="url(#bulletShine)"/>
+                        <ellipse cx="363" cy="405" rx="1.5" ry="1" fill="#444" opacity="0.4"/>
+                        <text x="366" y="406" text-anchor="middle" dominant-baseline="central" fill="white" font-size="9" font-weight="bold">m₀</text>
+                    </g>
+                    
+                    <g id="muzzleFlash" opacity="0">
+                        <circle cx="360" cy="405" r="35" fill="url(#flashGrad)" filter="url(#glow)"/>
+                        <circle cx="360" cy="405" r="22" fill="#ffeb3b" opacity="0.7"/>
+                        <circle cx="360" cy="405" r="12" fill="#ffffff" opacity="0.9"/>
+                        <circle cx="358" cy="403" r="6" fill="#ffffff"/>
+                    </g>
+
+                    <line id="initialMarker" x1="550" y1="435" x2="550" y2="475" stroke="#2c3e50" stroke-width="2" stroke-dasharray="5 5"/>
+                    <line id="finalMarker" x1="550" y1="435" x2="550" y2="475" stroke="#e74c3c" stroke-width="3" stroke-dasharray="5 5" opacity="0"/>
+
+                    <g id="xMeasure" opacity="0">
+                        <line x1="550" y1="440" x2="575" y2="440" stroke="#3498db" stroke-width="2"/>
+                        <line x1="550" y1="435" x2="550" y2="445" stroke="#3498db" stroke-width="2"/>
+                        <line x1="575" y1="435" x2="575" y2="445" stroke="#3498db" stroke-width="2"/>
+                        <text id="xText" x="562.5" y="430" fill="#3498db" font-size="16" font-weight="bold" text-anchor="middle">x</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <h3>⚙️ Початкові дані установки</h3>
+        <div class="input-group">
+            <div class="input-item"><label for="mass_m0">Маса кулі \(m_0\) (кг)</label><input type="number" id="mass_m0" value="0.001" step="0.001" min="0.001" required></div>
+            <div class="input-item"><label for="mass_m">Маса маятника \(m\) (кг)</label><input type="number" id="mass_m" value="0.08" step="0.01" min="0.01" required></div>
+            <div class="input-item"><label for="length_L">Відстань до центру мас \(L\) (м)</label><input type="number" id="length_L" value="1.00" step="0.01" min="0.50" max="1.00" required></div>
+            <div class="input-item"><label for="gravity_g">Прискорення \(g\) (м/с²)</label><input type="number" id="gravity_g" value="9.81" step="0.01" readonly></div>
+            <div class="input-item"><label for="gun_distance">Відстань до маятника (см)</label><input type="number" id="gun_distance" value="80" step="5" min="50" max="100" required></div>
+        </div>
+
+	<h3>🎯 Вимірювання відхилення \(x_i\) (м)</h3>
+        <div id="experimentInputs"></div>
+
+	 <h3>🧮 Основна формула</h3>
+        <div class="formula-box">
+            \[v_{0} = \frac{m_0 + m}{m_0} x \sqrt{\frac{g}{L}}\]
+        </div>
+
+        <h3>📊 Обробка похибок</h3>
+        <div class="input-group">
+            <div class="input-item"><label for="N_count">Кількість вимірювань \(N\)</label><input type="number" id="N_count" value="0" step="1" min="0" max="6"></div>
+            <div class="input-item"><label>Коефіцієнт Стьюдента \(t\)<sub>0.95,\(N\)</sub></label><div id="x_student_t_display" class="read-only-value">—</div></div>
+            <div class="input-item"><label>Знаменник дисперсії \(N(N-1)\)</label><div id="error_divisor_display" class="read-only-value">—</div></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" id="runCalc">🚀 Розрахувати швидкість</button>
+        </div>
+        <div id="statusMessage" class="status-message"></div>
+        <div class="results-section" id="resultsSection" style="display:none;">
+            <div class="results-header"><h2>📊 Результати та похибки</h2></div>
+            <div class="results-summary" id="resultsSummary"></div>
+            <div style="overflow-x:auto;"><table id="resultTable">
+                <thead>
+                    <tr><th rowspan="2">№</th><th rowspan="2">\(m_0\)</th><th rowspan="2">\(m\)</th><th rowspan="2">\(L\)</th><th colspan="2">Вимірювання</th><th colspan="2">Середнє</th><th colspan="2">Похибки</th></tr>
+                    <tr><th>\(x_i\)</th><th>\(v_{0i}\)</th><th>\(\bar{x}\)</th><th>\(\bar{v}_0\)</th><th>\(\Delta x\)</th><th>\(\Delta v_0\)</th></tr>
+                </thead>
+                <tbody id="resultTableBody"></tbody>
+            </table></div>
+        </div>
+    </div>
+
+<script>
+    let isCalculating = false;
+    let isAnimating = false;
+    const STUDENT_T_COEFFS = {2:12.71,3:4.30,4:3.18,5:2.78,6:2.57};
+    
+    const X_PENDULUM_CENTER = 590;
+    const Y_THREAD_TOP = 67;
+    const PENDULUM_WIDTH = 50;
+    const PENDULUM_HEIGHT = 60;
+    const MIN_L = 0.5;
+    const MAX_L = 1.0;
+    const PX_PER_CM = 3.4;
+
+    function showStatus(type, msg) {
+        const el = document.getElementById('statusMessage');
+        el.className = `status-message ${type}`;
+        el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${msg}` : msg;
+        el.style.display = 'block';
+    }
+    
+    function hideStatus() {
+        document.getElementById('statusMessage').style.display = 'none';
+    }
+
+    function updatePendulumPosition() {
+        const L = parseFloat(document.getElementById('length_L').value) || 1.0;
+        const clampedL = Math.max(MIN_L, Math.min(MAX_L, L));
+        
+        const gunInput = document.getElementById('gun_distance');
+        let GUN_DISTANCE_CM = parseFloat(gunInput.value);
+
+        if (isNaN(GUN_DISTANCE_CM) || GUN_DISTANCE_CM < 10) { 
+            GUN_DISTANCE_CM = 80;
+            gunInput.value = 80;
+        }
+        
+        if (L !== clampedL) {
+            document.getElementById('length_L').value = clampedL.toFixed(2);
+        }
+        
+        const yPosition = Y_THREAD_TOP + clampedL * PX_PER_CM * 100;
+            
+        const bobGroup = document.getElementById('bob-group');
+        const leftThread = document.getElementById('thread-left');
+        const rightThread = document.getElementById('thread-right');
+        const lengthMarker = document.getElementById('lengthMarker');
+        const lengthLabel = document.getElementById('lengthLabel');
+        const gunGroup = document.getElementById('gun');
+        const bullet = document.getElementById('bullet');
+        const muzzleFlash = document.getElementById('muzzleFlash');
+        const horizontalRuler = document.getElementById('horizontalRuler');
+        const initialMarker = document.getElementById('initialMarker');
+        
+        const bobCenterX = X_PENDULUM_CENTER;
+        const bobCenterY = yPosition;
+        const bobLeftX = bobCenterX - PENDULUM_WIDTH / 2;
+        
+        bobGroup.setAttribute('transform', `translate(${bobLeftX}, ${yPosition - PENDULUM_HEIGHT / 2})`);
+        
+        leftThread.setAttribute('x2', bobLeftX);
+        leftThread.setAttribute('y2', bobCenterY);
+        
+        rightThread.setAttribute('x2', bobLeftX + PENDULUM_WIDTH);
+        rightThread.setAttribute('y2', bobCenterY);
+        
+        lengthMarker.setAttribute('x1', X_PENDULUM_CENTER);
+        lengthMarker.setAttribute('x2', X_PENDULUM_CENTER);
+        lengthMarker.setAttribute('y1', Y_THREAD_TOP);
+        lengthMarker.setAttribute('y2', bobCenterY);
+        
+        lengthLabel.setAttribute('x', X_PENDULUM_CENTER + 10);
+        lengthLabel.setAttribute('y', (Y_THREAD_TOP + bobCenterY) / 2);
+        
+        const gunY = bobCenterY - 15;
+        const gunBodyWidth = 180;
+        const gunBarrelLength = 50;
+        const gunTotalLength = gunBodyWidth + gunBarrelLength; 
+        
+        const distanceToBobInPx = GUN_DISTANCE_CM * PX_PER_CM;
+        const gunX = bobLeftX - distanceToBobInPx - gunTotalLength; 
+        
+        gunGroup.querySelector('#gun-body').setAttribute('x', gunX);
+        gunGroup.querySelector('#gun-body').setAttribute('y', gunY);
+        gunGroup.querySelector('#gun-stock').setAttribute('x', gunX + 40);
+        gunGroup.querySelector('#gun-stock').setAttribute('y', gunY + 30);
+        gunGroup.querySelector('#gun-barrel').setAttribute('x', gunX + gunBodyWidth);
+        gunGroup.querySelector('#gun-barrel').setAttribute('y', gunY + 10);
+        gunGroup.querySelector('#gun-trigger').setAttribute('x', gunX + 100);
+        gunGroup.querySelector('#gun-trigger').setAttribute('y', gunY + 15);
+        gunGroup.querySelectorAll('circle')[0].setAttribute('cx', gunX + 20);
+        gunGroup.querySelectorAll('circle')[0].setAttribute('cy', gunY + 15);
+        gunGroup.querySelectorAll('circle')[1].setAttribute('cx', gunX + 160);
+        gunGroup.querySelectorAll('circle')[1].setAttribute('cy', gunY + 15);
+        
+        const bulletX = gunX + gunTotalLength - 10;
+        const bulletY = gunY + 15;
+        
+        window.bulletStartX = bulletX;
+        window.bulletStartY = bulletY;
+        window.bobCenterX = bobCenterX;
+        window.bobCenterY = bobCenterY;
+        window.bobLeftX = bobLeftX;
+        
+        bullet.setAttribute('transform', `translate(${bulletX - 375}, ${bulletY - 405})`);
+        muzzleFlash.setAttribute('transform', `translate(${bulletX - 375 + 15}, ${bulletY - 405})`);
+                
+        const rulerWidthCm = 50;
+        const rulerWidth = rulerWidthCm * PX_PER_CM;
+        
+        const horizontalRulerRect = horizontalRuler.querySelector('rect');
+        horizontalRulerRect.setAttribute('x', bobLeftX);
+        horizontalRulerRect.setAttribute('y', bobCenterY + 70);
+        horizontalRulerRect.setAttribute('width', rulerWidth);
+
+        const rulerLines = horizontalRuler.querySelectorAll('line');
+        const rulerTexts = horizontalRuler.querySelectorAll('text');
+
+        if (rulerLines[0]) {
+            rulerLines[0].setAttribute('x1', bobLeftX);
+            rulerLines[0].setAttribute('x2', bobLeftX + rulerWidth);
+            rulerLines[0].setAttribute('y1', bobCenterY + 80);
+            rulerLines[0].setAttribute('y2', bobCenterY + 80);
+        }
+
+        for (let i = 0; i <= 5; i++) {
+            const cmValue = i * 10;
+            const xPos = bobLeftX + cmValue * PX_PER_CM; 
+
+            if (rulerLines[i + 1]) {
+                rulerLines[i + 1].setAttribute('x1', xPos);
+                rulerLines[i + 1].setAttribute('x2', xPos);
+                rulerLines[i + 1].setAttribute('y1', bobCenterY + 75);
+                rulerLines[i + 1].setAttribute('y2', bobCenterY + 85);
+            }
+
+            if (rulerTexts[i]) {
+                rulerTexts[i].setAttribute('x', xPos - 5); 
+                rulerTexts[i].setAttribute('y', bobCenterY + 65);
+            }
+        }
+
+        if (rulerTexts[6]) {
+            rulerTexts[6].setAttribute('x', bobLeftX + rulerWidth + 5);
+            rulerTexts[6].setAttribute('y', bobCenterY + 95);
+        }
+        
+        initialMarker.setAttribute('x1', bobLeftX);
+        initialMarker.setAttribute('x2', bobLeftX);
+        initialMarker.setAttribute('y1', bobCenterY + 30);
+        initialMarker.setAttribute('y2', bobCenterY + 70);
+        
+        return {yPosition, bobCenterY, bobCenterX, bobLeftX, gunY, gunX, bulletX, bulletY};
+    }
+    
+    function getMaxDisplacement(L) {
+        const maxAngle = 0.2;
+        return L * maxAngle;
+    }
+
+    function validateInputs() {
+        const m0 = parseFloat(document.getElementById('mass_m0').value);
+        const m = parseFloat(document.getElementById('mass_m').value);
+        const L = parseFloat(document.getElementById('length_L').value);
+        const g = parseFloat(document.getElementById('gravity_g').value);
+        const N = parseInt(document.getElementById('N_count').value);
+        if (isNaN(m0) || m0 <= 0) throw new Error('Маса кулі (m₀) має бути > 0.');
+        if (isNaN(m) || m <= 0) throw new Error('Маса маятника (m) має бути > 0.');
+        if (isNaN(L) || L < MIN_L || L > MAX_L) throw new Error(`Відстань L має бути від ${MIN_L} до ${MAX_L} м.`);
+        if (isNaN(g) || g <= 0) throw new Error('Прискорення g має бути > 0.');
+        if (isNaN(N) || N < 2 || N > 6) throw new Error('Для розрахунку потрібно мінімум 2 вимірювання.');
+        const xValues = [];
+        const maxX = getMaxDisplacement(L);
+        for (let i = 1; i <= N; i++) {
+            const x = parseFloat(document.getElementById(`x${i}`).value);
+            if (isNaN(x) || x <= 0) throw new Error(`Відхилення x<sub>${i}</sub> має бути > 0.`);
+            if (x > maxX) throw new Error(`Відхилення x<sub>${i}</sub> перевищує допустиме значення ${maxX.toFixed(3)} м для малих кутів.`);
+            xValues.push(x);
+        }
+        return {m0, m, L, N, xValues};
+    }
+
+    function updateN() {
+        let N = parseInt(document.getElementById('N_count').value) || 0;
+        N = Math.max(0, Math.min(6, N));
+        document.getElementById('N_count').value = N;
+        
+        if (N >= 2) {
+            document.getElementById('x_student_t_display').textContent = STUDENT_T_COEFFS[N].toFixed(2);
+            document.getElementById('error_divisor_display').textContent = N * (N - 1);
+        } else {
+            document.getElementById('x_student_t_display').textContent = '—';
+            document.getElementById('error_divisor_display').textContent = '—';
+        }
+        
+        generateXInputs(N);
+    }
+
+    function generateXInputs(N) {
+        const container = document.getElementById('experimentInputs');
+        
+        if (N === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const L = parseFloat(document.getElementById('length_L').value) || 1.0;
+        const maxX = getMaxDisplacement(L);
+        
+        const existingValues = {};
+        for (let i = 1; i <= 6; i++) {
+            const input = document.getElementById(`x${i}`);
+            if (input) {
+                existingValues[`x${i}`] = parseFloat(input.value);
+            }
+        }
+
+        const currentChildren = container.children.length;
+        
+        if (N > currentChildren) {
+            for (let i = currentChildren + 1; i <= N; i++) {
+                const div = document.createElement('div');
+                div.className = 'input-item';
+                
+                const label = document.createElement('label');
+                label.htmlFor = `x${i}`;
+                label.innerHTML = `\\(x_{${i}}\\) (м)`; 
+                
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.id = `x${i}`;
+                
+                let defaultValue;
+                if (i === 1) {
+                    defaultValue = existingValues['x1'] || Math.min(0.1, maxX * 0.9);
+                } else {
+                    const prevX = existingValues[`x${i-1}`] || parseFloat(document.getElementById(`x${i-1}`)?.value) || 0.1;
+                    const variation = (Math.random() * 2 - 1) * 0.01;
+                    defaultValue = prevX * (1 + variation);
+                }
+                
+                input.value = defaultValue.toFixed(3);
+                input.step = '0.001';
+                input.min = '0.001';
+                input.max = maxX.toFixed(3);
+                input.required = true;
+                
+                div.appendChild(label);
+                div.appendChild(input);
+                container.appendChild(div);
+            }
+        } else if (N < currentChildren) {
+            for (let i = currentChildren; i > N; i--) {
+                if (container.lastChild) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+        }
+        
+        for (let i = 1; i <= N; i++) {
+            const input = document.getElementById(`x${i}`);
+            if (input) {
+                input.max = maxX.toFixed(3);
+                if (existingValues[`x${i}`] !== undefined) {
+                    input.value = existingValues[`x${i}`].toFixed(3);
+                }
+            }
+        }
+        
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+            MathJax.typesetPromise([container]);
+        }
+    }
+
+    async function runBallisticPendulum() {
+        if (isCalculating) return;
+        isCalculating = true;
+        document.getElementById('runCalc').disabled = true;
+        try {
+            const {m0, m, L, N, xValues} = validateInputs();
+            showStatus('loading', 'Обчислення...');
+            
+            const g = parseFloat(document.getElementById('gravity_g').value);
+            const t = parseFloat(document.getElementById('x_student_t_display').textContent);
+            const divisor = parseFloat(document.getElementById('error_divisor_display').textContent);
+            
+            const coeff = (m0 + m) / m0;
+            const v0_values = xValues.map(x => coeff * x * Math.sqrt(g / L));
+            const x_avg = xValues.reduce((a, b) => a + b, 0) / N;
+            const v0_avg = v0_values.reduce((a, b) => a + b, 0) / N;
+            const Dt = xValues.reduce((sum, x) => sum + Math.pow(x - x_avg, 2), 0) / divisor;
+            const delta_x = t * Math.sqrt(Dt);
+            const delta_v0 = coeff * Math.sqrt(g / L) * delta_x;
+            
+            const results = {
+                m0: m0, m: m, L: L,
+                x_values: xValues,
+                v0_values: v0_values,
+                x_avg: x_avg,
+                v0_avg: v0_avg,
+                delta_x: delta_x,
+                delta_v0: delta_v0,
+                N: N
+            };
+            
+            displayResults(results);
+            showStatus('success', 'Розрахунок завершено!');
+            setTimeout(hideStatus, 3000);
+        } catch (e) {
+            showStatus('error', `Помилка обчислення: ${e.message}`);
+        } finally {
+            isCalculating = false;
+            document.getElementById('runCalc').disabled = false;
+        }
+    }
+
+    function displayResults(res) {
+        const section = document.getElementById('resultsSection');
+        section.style.display = 'block';
+        document.getElementById('resultsSummary').innerHTML = `<strong>Швидкість кулі:</strong> \\(\\bar{v}_0 = ${res.v0_avg.toFixed(1)} \\pm ${res.delta_v0.toFixed(1)}\\) м/с`;
+        const tbody = document.getElementById('resultTableBody');
+        tbody.innerHTML = '';
+        const N = res.N, xVals = res.x_values, vVals = res.v0_values;
+        for (let i = 0; i < N; i++) {
+            const row = tbody.insertRow();
+            row.innerHTML = `<td>${i+1}</td><td>${res.m0.toFixed(3)}</td><td>${res.m.toFixed(2)}</td><td>${res.L.toFixed(2)}</td><td>${xVals[i].toFixed(3)}</td><td>${vVals[i].toFixed(1)}</td>`;
+            if (i === 0) {
+                const avgRow = tbody.rows[0];
+                [
+                    {key: 'x_avg', precision: 3},
+                    {key: 'v0_avg', precision: 1},
+                    {key: 'delta_x', precision: 3},
+                    {key: 'delta_v0', precision: 1}
+                ].forEach(({key, precision}) => {
+                    const td = document.createElement('td');
+                    td.textContent = res[key].toFixed(precision);
+                    td.rowSpan = N;
+                    avgRow.appendChild(td);
+                });
+            }
+        }
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+            MathJax.typesetPromise([document.getElementById('resultsSummary')]);
+        }
+    }
+
+    function animateExperiment() {
+        if (isAnimating) return;
+        
+        const N = parseInt(document.getElementById('N_count').value) || 0;
+        if (N >= 6) {
+            showStatus('error', 'Досягнуто максимальну кількість вимірювань (6)');
+            setTimeout(hideStatus, 3000);
+            return;
+        }
+        
+        isAnimating = true;
+        const btn = document.getElementById('animateBtn');
+        btn.disabled = true;
+        btn.textContent = '💥 Постріл...';
+
+        const bullet = document.getElementById('bullet');
+        const muzzleFlash = document.getElementById('muzzleFlash');
+        const pendulumGroup = document.getElementById('pendulumGroup');
+        const embedded = document.getElementById('embedded-bullet');
+        const bobText = document.getElementById('bob-text');
+        const bobGroup = document.getElementById('bob-group');
+        const finalMarker = document.getElementById('finalMarker');
+        const xMeasure = document.getElementById('xMeasure');
+        const angleDisplay = document.getElementById('angleDisplay');
+        const angleValue = document.getElementById('angleValue');
+        const displacementValue = document.getElementById('displacementValue');
+        
+        pendulumGroup.querySelectorAll('animateTransform').forEach(el => el.remove());
+        finalMarker.setAttribute('opacity', '0'); 
+        xMeasure.setAttribute('opacity', '0');
+        embedded.setAttribute('opacity', '0');
+        bobText.textContent = 'M';
+        angleDisplay.style.display = 'none';
+        
+        const positions = updatePendulumPosition();
+        const savedBobCenterX = positions.bobCenterX;
+        const savedBobCenterY = positions.bobCenterY;
+        const savedBobLeftX = positions.bobLeftX;
+        const bulletX = positions.bulletX;
+        const bulletY = positions.bulletY;
+        
+        const L = parseFloat(document.getElementById('length_L').value); 
+        const maxX = getMaxDisplacement(L);
+        
+        let assumedX;
+        if (N === 0) {
+            assumedX = Math.min(0.1, maxX * 0.9);
+        } else {
+            const lastX = parseFloat(document.getElementById(`x${N}`)?.value) || 0.1;
+            const variation = (Math.random() * 2 - 1) * 0.01;
+            assumedX = Math.min(lastX * (1 + variation), maxX * 0.95);
+        }
+        
+        const L_PIVOT_PX = savedBobCenterY - Y_THREAD_TOP;
+        const xDisplacementPx = (assumedX / L) * L_PIVOT_PX;
+        const sinThetaVisual = xDisplacementPx / L_PIVOT_PX;
+        const clampedSinTheta = Math.max(-0.2, Math.min(0.2, sinThetaVisual));
+        const maxAngleRad = Math.asin(clampedSinTheta);
+        const maxAngleDeg = maxAngleRad * (180 / Math.PI);
+        
+        const preparationTime = 0.3;
+        const bulletTime = 0.6; 
+        const impactDelay = 0.1; 
+        const swingTime = 0.8;
+        const peakHoldTime = 0.7; 
+        const returnTime = 0.7; 
+        
+        const X_PENDULUM_START = savedBobLeftX;
+        const X_END_MARKER = X_PENDULUM_START + xDisplacementPx;
+        
+        bullet.setAttribute('opacity', '0');
+        muzzleFlash.setAttribute('opacity', '0');
+        bullet.style.transform = '';
+        bullet.setAttribute('transform', `translate(${window.bulletStartX - 375}, ${window.bulletStartY - 405})`);
+        
+        setTimeout(() => {
+            btn.textContent = '🔥 ПОСТРІЛ!';
+        }, preparationTime * 1000);
+        
+        setTimeout(() => {
+            muzzleFlash.setAttribute('opacity', '1');
+            bullet.setAttribute('opacity', '1');
+            
+            let flashCount = 0;
+            const flashInterval = setInterval(() => {
+                const opacity = flashCount % 2 === 0 ? '1' : '0.7';
+                muzzleFlash.setAttribute('opacity', opacity);
+                flashCount++;
+                if (flashCount > 5) {
+                    clearInterval(flashInterval);
+                    muzzleFlash.setAttribute('opacity', '0');
+                }
+            }, 60);
+            
+            const bulletStartX = window.bulletStartX || bulletX;
+            const bulletStartY = window.bulletStartY || bulletY;
+            const targetX = savedBobLeftX;
+            const targetY = savedBobCenterY;
+            const bulletDistance = targetX - bulletStartX;
+            const bulletHeightChange = targetY - bulletStartY;
+            
+            let progress = 0;
+            const bulletInterval = setInterval(() => {
+                progress += 0.018;
+                if (progress >= 1) {
+                    clearInterval(bulletInterval);
+                    progress = 1;
+                }
+                const easeProgress = progress < 0.5 
+                    ? 2 * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+                const currentX = (bulletStartX - 375) + easeProgress * bulletDistance;
+                const currentY = (bulletStartY - 405) + easeProgress * bulletHeightChange;
+                bullet.setAttribute('transform', `translate(${currentX}, ${currentY})`);
+            }, 10);
+            
+        }, (preparationTime + impactDelay) * 1000);
+
+        setTimeout(() => {
+            bullet.setAttribute('opacity', '0');
+            embedded.setAttribute('opacity', '1');
+            bobText.textContent = 'M+m₀';
+            
+            document.getElementById('bob-contents').style.animation = 'impact 0.15s ease-out';
+            setTimeout(() => { document.getElementById('bob-contents').style.animation = ''; }, 150);
+            
+            const rotateAnimPeak = document.createElementNS("http://www.w3.org/2000/svg", "animateTransform");
+            rotateAnimPeak.setAttribute("attributeName", "transform");
+            rotateAnimPeak.setAttribute("type", "rotate");
+            rotateAnimPeak.setAttribute("from", `0 ${savedBobCenterX} ${Y_THREAD_TOP}`); 
+            rotateAnimPeak.setAttribute("to", `${-maxAngleDeg} ${savedBobCenterX} ${Y_THREAD_TOP}`); 
+            rotateAnimPeak.setAttribute("dur", `${swingTime}s`);
+            rotateAnimPeak.setAttribute("fill", "freeze");
+            rotateAnimPeak.setAttribute("calcMode", "spline");
+            rotateAnimPeak.setAttribute("keySplines", "0.42 0 0.58 1");
+            rotateAnimPeak.setAttribute("keyTimes", "0;1");
+            pendulumGroup.appendChild(rotateAnimPeak);
+
+            setTimeout(() => {
+                finalMarker.setAttribute('opacity', '1');
+                xMeasure.setAttribute('opacity', '1');
+		document.getElementById('xMeasure').children[1].setAttribute('opacity', '0');
+                angleDisplay.style.display = 'block';
+                
+                angleValue.textContent = `${maxAngleDeg.toFixed(1)}°`;
+                displacementValue.textContent = `${(assumedX * 100).toFixed(1)} см`;
+                
+                finalMarker.setAttribute('x1', X_END_MARKER);
+                finalMarker.setAttribute('x2', X_END_MARKER);
+                finalMarker.setAttribute('y1', savedBobCenterY - 30);
+                finalMarker.setAttribute('y2', savedBobCenterY + 70);
+                
+                xMeasure.children[0].setAttribute('y1', savedBobCenterY + 35);
+                xMeasure.children[0].setAttribute('y2', savedBobCenterY + 35);
+                xMeasure.children[0].setAttribute('x1', X_PENDULUM_START); 
+                xMeasure.children[0].setAttribute('x2', X_END_MARKER);
+ 		xMeasure.children[0].setAttribute('stroke-dasharray', '5 5');
+                xMeasure.children[1].setAttribute('x1', X_PENDULUM_START);
+                xMeasure.children[1].setAttribute('y1', savedBobCenterY + 30);
+                xMeasure.children[1].setAttribute('y2', savedBobCenterY + 40);
+                xMeasure.children[2].setAttribute('x1', X_END_MARKER); 
+                xMeasure.children[2].setAttribute('x2', X_END_MARKER);
+                xMeasure.children[2].setAttribute('y1', savedBobCenterY + 30);
+                xMeasure.children[2].setAttribute('y2', savedBobCenterY + 40);
+                document.getElementById('xText').setAttribute('x', X_PENDULUM_START + xDisplacementPx / 2);
+                document.getElementById('xText').setAttribute('y', savedBobCenterY + 25);
+
+            }, swingTime * 1000); 
+
+            setTimeout(() => {
+                finalMarker.setAttribute('opacity', '0');
+                xMeasure.setAttribute('opacity', '0');
+
+                const rotateAnimReturn = document.createElementNS("http://www.w3.org/2000/svg", "animateTransform");
+                rotateAnimReturn.setAttribute("attributeName", "transform");
+                rotateAnimReturn.setAttribute("type", "rotate");
+                rotateAnimReturn.setAttribute("from", `${-maxAngleDeg} ${savedBobCenterX} ${Y_THREAD_TOP}`); 
+                rotateAnimReturn.setAttribute("to", `0 ${savedBobCenterX} ${Y_THREAD_TOP}`); 
+                rotateAnimReturn.setAttribute("dur", `${returnTime}s`);
+                rotateAnimReturn.setAttribute("fill", "freeze");
+                rotateAnimReturn.setAttribute("calcMode", "spline");
+                rotateAnimReturn.setAttribute("keySplines", "0.42 0 0.58 1");
+                rotateAnimReturn.setAttribute("keyTimes", "0;1");
+                pendulumGroup.appendChild(rotateAnimReturn);
+
+            }, (swingTime + peakHoldTime) * 1000); 
+
+            setTimeout(() => {
+                isAnimating = false;
+                
+                embedded.setAttribute('opacity', '0');
+                bobText.textContent = 'M';
+                
+                pendulumGroup.querySelectorAll('animateTransform').forEach(el => el.remove());
+                bobGroup.style.animation = '';
+                angleDisplay.style.display = 'none';
+                
+                const newN = N + 1;
+                document.getElementById('N_count').value = newN;
+                updateN();
+                
+                setTimeout(() => {
+                    const newInput = document.getElementById(`x${newN}`);
+                    if (newInput) {
+                        newInput.value = assumedX.toFixed(3);
+                    }
+                    if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+                        MathJax.typesetPromise();
+                    }
+                }, 200);
+                
+                btn.disabled = newN >= 6;
+                btn.textContent = newN >= 6 ? '🔒 Максимум вимірювань' : '🎯 Постріл!';
+                
+            }, (swingTime + peakHoldTime + returnTime) * 1000);
+
+        }, (preparationTime + bulletTime + impactDelay) * 1000);
+    }
+
+    document.getElementById('animateBtn').addEventListener('click', animateExperiment);
+    document.getElementById('N_count').addEventListener('input', updateN);
+    document.getElementById('runCalc').addEventListener('click', runBallisticPendulum);
+    document.getElementById('length_L').addEventListener('input', () => {
+        updatePendulumPosition();
+        updateN();
+    });
+    document.getElementById('gun_distance').addEventListener('input', updatePendulumPosition);
+    
+    document.getElementById('length_L').addEventListener('input', (e) => {
+        const L = parseFloat(e.target.value);
+        if (L < MIN_L || L > MAX_L) {
+            e.target.style.borderColor = '#e74c3c';
+        } else {
+            e.target.style.borderColor = '#3498db';
+        }
+    });
+    
+    window.addEventListener('load', () => { 
+        updateN();
+        updatePendulumPosition();
+        
+        const hidePreloader = () => {
+            const preloader = document.getElementById('preloader');
+            preloader.style.opacity = '0';
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 500);
+        };
+        
+        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) {
+            MathJax.typesetPromise().then(hidePreloader);
+        } else {
+            setTimeout(hidePreloader, 300);
+        }
+    });
+</script>
+</body>
+</html>
